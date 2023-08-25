@@ -13,6 +13,8 @@ HWND editWindow;
 HWND notepadWindow;
 std::vector<void *>notepadFramebufferMemory;
 char *frameBuffer;
+RECT frameBufferSizeRect = {};
+
 
 struct Size
 {
@@ -68,7 +70,9 @@ bool writeStringToNotepadBruteAndFindPointer()
 
 	assert(notepadWindow);
 	MoveWindow(notepadWindow, 100, 100, windowSizeX, windowSizeY, true);
-	
+	GetClientRect(notepadWindow, &frameBufferSizeRect);
+
+
 	frameBuffer = (char *)malloc(frameBufferSize);
 
 	int i = 0;
@@ -349,11 +353,9 @@ namespace platform
 		return {point.x, point.y};
 	}
 
-	glm::ivec2 getFrameBufferSize()
+	glm::ivec2 getFrameBufferSize()//todo make constant
 	{
-		RECT rect = {};
-		GetClientRect(notepadWindow, &rect);
-		return {rect.right-rect.left, rect.bottom-rect.top};
+		return {frameBufferSizeRect.right- frameBufferSizeRect.left, frameBufferSizeRect.bottom- frameBufferSizeRect.top};
 	}
 
 	void showMouse(bool show)

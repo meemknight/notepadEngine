@@ -14,8 +14,9 @@
 #include <fstream>
 #include <chrono>
 #include <notepad.h>
+#include <openglError.h>
 
-#define REMOVE_IMGUI 0
+#define REMOVE_IMGUI 1
 
 #if REMOVE_IMGUI == 0
 	#include "imgui.h"
@@ -25,12 +26,9 @@
 #endif
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #endif
-
-#undef min
-#undef max
-
 
 bool windowFocus = 1;
 
@@ -127,12 +125,26 @@ int main()
 	//permaAssertComment(gladLoadGL(), "err initializing glad");
 	permaAssertComment(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress), "err initializing glad");
 
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(glDebugOutput, 0);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
 #pragma endregion
 
 #pragma region gl2d
 	gl2d::init();
 #pragma endregion
+
+	gl2d::Renderer2D screenRenderer;
+	if(makeTheWindowVisible)
+	{
+		screenRenderer.create(0, 20);
+	}
+	screenRenderer.updateWindowMetrics(platform::getFrameBufferSize().x, platform::getFrameBufferSize().y);
+
+	gl2d::FrameBuffer windowFbo;
+	windowFbo.create(platform::getFrameBufferSize().x, platform::getFrameBufferSize().y);
 
 
 #pragma region imgui
@@ -173,10 +185,8 @@ int main()
 
 #pragma endregion
 
-
-
 #pragma region initGame
-	if (!initGame())
+	if (!initGame(windowFbo))
 	{
 		return 0;
 	}
@@ -219,13 +229,104 @@ int main()
 
 	#pragma region game logic
 
-		if (!gameLogic(augmentedDeltaTime))
+		if (!gameLogic(augmentedDeltaTime, windowFbo))
 		{
 			closeGame();
 			return 0;
 		}
 
+		if (makeTheWindowVisible)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glDisable(GL_DEPTH_TEST);
+
+			screenRenderer.renderRectangle({0, 0, platform::getFrameBufferSize()}, windowFbo.texture);
+			screenRenderer.flush();
+
+			//glBegin(GL_TRIANGLES);
+			//
+			//glVertex2f(0, 1);
+			//glVertex2f(1, -1);
+			//glVertex2f(-1, -1);
+			//
+			//glEnd();
+
+		}
+
 	#pragma endregion
+
+	#pragma region render to notepad
+		{
+			static std::vector<unsigned char> immageData;
+			glm::ivec2 immageSize = windowFbo.texture.GetSize();
+			immageData.reserve(4 * immageSize.x * immageSize.y);
+
+			assert(immageSize == platform::getFrameBufferSize());
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, windowFbo.texture.id);
+
+			glGetTexImage(GL_TEXTURE_2D,
+				0,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				immageData.data());
+
+			auto sampleImmage = [&](float x, float y) -> float
+			{
+				if (x < 0 || x>1 || y < 0 || y>1) { return 0.f; }
+
+				glm::ivec2 pos = glm::ivec2(glm::vec2(x, y) * glm::vec2(immageSize - glm::ivec2(1, 1)));
+
+				glm::vec4 data;
+
+				data.r = immageData[(pos.x + pos.y * immageSize.x) * 4] / 255.f;
+				data.g = immageData[(pos.x + pos.y * immageSize.x) * 4 + 1] / 255.f;
+				data.b = immageData[(pos.x + pos.y * immageSize.x) * 4 + 2] / 255.f;
+
+				return glm::dot(glm::vec3(data), glm::vec3(0.2126, 0.7152, 0.0722));
+			};
+
+			for (int y = 0; y < getNotepadBufferSize().y; y++)
+				for (int x = 0; x < getNotepadBufferSize().x; x++)
+				{
+
+					glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
+
+					auto s = sampleImmage(uv.x, 1.f-uv.y);
+
+					if (s < 0.1)
+					{
+						writeInBuffer(x, y, '@');
+					}
+					else if (s < 0.3)
+					{
+						writeInBuffer(x, y, 'X');
+					}
+					else if (s < 0.5)
+					{
+						writeInBuffer(x, y, 'O');
+					}
+					else if (s < 0.7)
+					{
+						writeInBuffer(x, y, ':');
+					}
+					else if (s < 0.9)
+					{
+						writeInBuffer(x, y, '.');
+					}
+					else
+					{
+						writeInBuffer(x, y, ' ');
+					}
+
+				}
+
+		}
+	#pragma endregion
+
+
 
 	#pragma region reset flags
 

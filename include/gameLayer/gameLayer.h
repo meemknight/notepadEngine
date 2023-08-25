@@ -1,8 +1,9 @@
 #pragma once
 #include <glm/vec2.hpp>
+#include <gl2d/gl2d.h>
 
-bool initGame();
-bool gameLogic(float deltaTime);
+bool initGame(gl2d::FrameBuffer fbo);
+bool gameLogic(float deltaTime, gl2d::FrameBuffer fbo);
 void closeGame();
 
 namespace platform

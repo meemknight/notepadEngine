@@ -304,6 +304,7 @@ namespace gl2d
 	{
 		unsigned int fbo = 0;
 		Texture texture = {};
+		Texture depthtTexture = {};
 
 		void create(unsigned int w, unsigned int h);
 		void resize(unsigned int w, unsigned int h);

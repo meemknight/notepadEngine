@@ -1840,18 +1840,25 @@ namespace gl2d
 
 		//glDrawBuffer(GL_COLOR_ATTACHMENT0); //todo why is this commented out ?
 
-		//glGenTextures(1, &depthtTexture);
-		//glBindTexture(GL_TEXTURE_2D, depthtTexture);
-
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtTexture, 0);
+		glGenTextures(1, &depthtTexture.id);
+		glBindTexture(GL_TEXTURE_2D, depthtTexture.id);
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtTexture.id, 0);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		auto rez = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (rez != GL_FRAMEBUFFER_COMPLETE)
+		{
+			errorFunc("Error creating fbo", userDefinedData);
+
+		}
 
 	}
 
@@ -1860,8 +1867,8 @@ namespace gl2d
 		glBindTexture(GL_TEXTURE_2D, texture.id);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-		//glBindTexture(GL_TEXTURE_2D, depthtTexture);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glBindTexture(GL_TEXTURE_2D, depthtTexture.id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	}
 
@@ -1879,8 +1886,8 @@ namespace gl2d
 			texture = {};
 		}
 
-		//glDeleteTextures(1, &depthtTexture);
-		//depthtTexture = 0;
+		glDeleteTextures(1, &depthtTexture.id);
+		depthtTexture = {};
 	}
 
 	void FrameBuffer::clear()
