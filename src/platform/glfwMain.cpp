@@ -44,7 +44,7 @@ void windowSizeCallback(GLFWwindow *window, int x, int y)
 
 GLFWwindow *wind = 0;
 
-bool makeTheWindowVisible = 0;
+bool makeTheWindowVisible = 1;
 
 namespace platform
 {
@@ -101,15 +101,23 @@ int main()
 #endif
 #endif
 
+#pragma region init notepad
+
+	permaAssertComment(openTheNotepadInstance(), "err initializing the notepad");
+
+#pragma endregion
 
 #pragma region window and opengl
 
 	permaAssertComment(glfwInit(), "err initializing glfw");
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_VISIBLE, makeTheWindowVisible);
+	glfwWindowHint(GLFW_RESIZABLE, false);
 
-	int w = 500;
-	int h = 500;
+	auto notepadSize = platform::getFrameBufferSize();
+
+	int w = notepadSize.x;
+	int h = notepadSize.y;
 	wind = glfwCreateWindow(w, h, "geam", nullptr, nullptr);
 	glfwMakeContextCurrent(wind);
 	glfwSwapInterval(2);
@@ -165,11 +173,7 @@ int main()
 
 #pragma endregion
 
-#pragma region init notepad
 
-	permaAssertComment(openTheNotepadInstance(), "err initializing the notepad");
-
-#pragma endregion
 
 #pragma region initGame
 	if (!initGame())
@@ -233,7 +237,11 @@ int main()
 
 	#pragma region notepad stuff
 
-		if (!checkNotepadOpen()) { glfwSetWindowShouldClose(wind, true); }
+		if (!checkNotepadOpen()) 
+		{
+			closeGame();
+			return 0;
+		}
 
 		UpdateText();
 

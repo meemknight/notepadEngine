@@ -13,11 +13,27 @@ HWND editWindow;
 HWND notepadWindow;
 std::vector<void *>notepadFramebufferMemory;
 char *frameBuffer;
-//int sizeX = 131;
-//int sizeY = 28;
 
-int sizeX = 80;
-int sizeY = 28;
+struct Size
+{
+	int x;
+	int y;
+	int time;
+
+	int windowSizeX;
+	int windowSizeY;
+}sizes[3] = {{60, 20, 5000, 520, 450}, {80, 30, 5000, 680, 630}};
+
+constexpr int CURRENT_SIZE = 1;
+
+int sizeX = sizes[CURRENT_SIZE].x;
+int sizeY = sizes[CURRENT_SIZE].y;
+int windowSizeX = sizes[CURRENT_SIZE].windowSizeX;
+int windowSizeY = sizes[CURRENT_SIZE].windowSizeY;
+int sleepTime = sizes[CURRENT_SIZE].time;
+
+//int sizeX = 80;
+//int sizeY = 28;
 
 size_t frameBufferSize = (sizeX + 2) * sizeY * 2;
 
@@ -50,7 +66,8 @@ bool writeStringToNotepadBruteAndFindPointer()
 {
 	srand((unsigned)notepadPid + (unsigned)time(0));
 
-	MoveWindow(notepadWindow, 100, 100, 1365, 764, true);
+	assert(notepadWindow);
+	MoveWindow(notepadWindow, 100, 100, windowSizeX, windowSizeY, true);
 	
 	frameBuffer = (char *)malloc(frameBufferSize);
 
@@ -59,7 +76,17 @@ bool writeStringToNotepadBruteAndFindPointer()
 	{
 		for (int x = 0; x < sizeX; x++)
 		{
-			char v = 'A' + (rand() % 26);
+			char v = 0;
+			if (i < 10)
+			{
+				const char *patern = "TOTALLYUNIQUE";
+				v = patern[i];
+			}
+			else
+			{
+				v = 'A' + (rand() % 26);
+			}
+
 			PostMessage(editWindow, WM_CHAR, v, 0);
 			frameBuffer[i * 2] = v;
 			frameBuffer[i * 2 + 1] = 0x00;
@@ -89,10 +116,28 @@ bool writeStringToNotepadBruteAndFindPointer()
 
 	}
 	
-	Sleep(5000); //wait for input messages to finish processing...it's slow. 
+	Sleep(sleepTime); //wait for input messages to finish processing...it's slow. 
 	//Now use the frameBuffer as the unique byte pattern to search for
 
-	auto rez = findBytePatternInProcessMemory(notepadHandle, frameBuffer, std::min(frameBufferSize, (size_t)100));
+#pragma region block input
+	if (1)
+	{
+		//auto style = GetWindowLongPtrA(notepadWindow, GWL_EXSTYLE);
+		//style |= WS_EX_NOACTIVATE;
+		//style |= WS_EX_APPWINDOW;
+		//SetWindowLongPtrA(notepadWindow, GWL_EXSTYLE, style);
+
+		auto style = GetWindowLongPtrA(editWindow, GWL_STYLE);
+		style |= WS_DISABLED;
+		SetWindowLongPtrA(editWindow, GWL_STYLE, style);
+
+		//style = GetWindowLongPtrA(notepadWindow, GWL_STYLE);
+		//style &= !WS_SIZEBOX;
+		//SetWindowLongPtrA(notepadWindow, GWL_STYLE, style);
+	}
+#pragma endregion
+
+	auto rez = findBytePatternInProcessMemory(notepadHandle, frameBuffer, std::min(frameBufferSize, (size_t)79));
 	
 	if (rez.empty())
 	{
@@ -209,19 +254,6 @@ bool openTheNotepadInstance()
 		Sleep(5);
 	}
 
-#pragma region block input
-	{
-		//auto style = GetWindowLongPtrA(notepadWindow, GWL_EXSTYLE);
-		//style |= WS_EX_NOACTIVATE;
-		//style |= WS_EX_APPWINDOW;
-		//SetWindowLongPtrA(notepadWindow, GWL_EXSTYLE, style);
-
-		auto style = GetWindowLongPtrA(editWindow, GWL_STYLE);
-		style |= WS_DISABLED;
-		SetWindowLongPtrA(editWindow, GWL_STYLE, style);
-	}
-#pragma endregion
-
 	if (!editWindow)
 	{
 		std::cout << "couldn't get eidt window\n";
@@ -232,6 +264,7 @@ bool openTheNotepadInstance()
 	{
 		return 0;
 	}
+
 
 
 	//exit(0);
@@ -319,7 +352,7 @@ namespace platform
 	glm::ivec2 getFrameBufferSize()
 	{
 		RECT rect = {};
-		GetClientRect(editWindow, &rect);
+		GetClientRect(notepadWindow, &rect);
 		return {rect.right-rect.left, rect.bottom-rect.top};
 	}
 
