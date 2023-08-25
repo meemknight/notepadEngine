@@ -288,6 +288,14 @@ int main()
 				return glm::dot(glm::vec3(data), glm::vec3(0.2126, 0.7152, 0.0722));
 			};
 
+			struct Letter
+			{
+				char a = ' ';
+				char b = 0;
+			};
+
+			Letter gradient[] = {{' '}, { '.' }, {':'}, {'-'}, {'='}, {'+'}, {'*'}, {'#'}};
+
 			for (int y = 0; y < getNotepadBufferSize().y; y++)
 				for (int x = 0; x < getNotepadBufferSize().x; x++)
 				{
@@ -296,30 +304,10 @@ int main()
 
 					auto s = sampleImmage(uv.x, 1.f-uv.y);
 
-					if (s < 0.1)
-					{
-						writeInBuffer(x, y, '@');
-					}
-					else if (s < 0.3)
-					{
-						writeInBuffer(x, y, 'X');
-					}
-					else if (s < 0.5)
-					{
-						writeInBuffer(x, y, 'O');
-					}
-					else if (s < 0.7)
-					{
-						writeInBuffer(x, y, ':');
-					}
-					else if (s < 0.9)
-					{
-						writeInBuffer(x, y, '.');
-					}
-					else
-					{
-						writeInBuffer(x, y, ' ');
-					}
+					int gradientCount = sizeof(gradient) / sizeof(Letter);
+					int index = (1 - s) * (gradientCount-1);
+
+					writeInBuffer(x, y, gradient[index].a, gradient[index].b);
 
 				}
 

@@ -13,8 +13,7 @@
 
 gl2d::Renderer2D renderer;
 
-glm::ivec2 immageSize;
-stbi_uc *immageData;
+gl2d::Texture t;
 
 
 bool initGame(gl2d::FrameBuffer fbo)
@@ -23,11 +22,7 @@ bool initGame(gl2d::FrameBuffer fbo)
 	gl2d::init();
 	renderer.create(fbo.fbo);
 
-
-	int channels = 0;
-	stbi_set_flip_vertically_on_load(0);
-	immageData = stbi_load(RESOURCES_PATH "amogus.png", &immageSize.x, &immageSize.y, &channels, 4);
-
+	t.loadFromFile(RESOURCES_PATH "amogus.png");
 	
 	return true;
 }
@@ -54,7 +49,7 @@ bool gameLogic(float deltaTime, gl2d::FrameBuffer fbo)
 
 	static glm::vec2 pos = {100,100};
 
-	renderer.renderRectangle({pos, 100, 100}, Colors_White);
+	renderer.renderRectangle({pos, 100, 100}, t);
 	renderer.flush();
 
 	if (platform::isKeyHeld(platform::Button::Left))
