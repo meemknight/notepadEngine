@@ -29,9 +29,9 @@ float sampleImmage(float x, float y)
 	data.b = immageData[(pos.x + pos.y * immageSize.x) * 4+2]/255.f;
 	data.a = immageData[(pos.x + pos.y * immageSize.x) * 4+3]/255.f;
 
-	if (data.a < 0.1) { return 0; }
+	if (data.a < 0.1) { return 1.f; }
 
-	return glm::length(glm::vec3(data));
+	return glm::dot(glm::vec3(data), glm::vec3(0.2126, 0.7152, 0.0722));
 }
 
 bool initGame()
@@ -65,10 +65,13 @@ bool gameLogic(float deltaTime)
 
 #pragma endregion
 
+	//0, 40 brail
+	//0, 43 boxes
 
 	for (int y = 0; y < getNotepadBufferSize().y; y++)
 		for (int x = 0; x < getNotepadBufferSize().x; x++)
 		{
+			//writeInBuffer(x, y, x+20,y+43);
 			writeInBuffer(x, y, ' ');
 		}
 
@@ -76,20 +79,27 @@ bool gameLogic(float deltaTime)
 	for (int y = 0; y < getNotepadBufferSize().y; y++)
 		for (int x = 0; x < getNotepadBufferSize().x; x++)
 		{
-
+	
 			glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
-
+	
 			auto s = sampleImmage(uv.x, uv.y);
-
+	
 			if (s < 0.1)
+			{
+				writeInBuffer(x, y, '@');
+			}
+			else if (s < 0.3)
 			{
 				writeInBuffer(x, y, 'X');
 			}
-			else if (s < 0.6)
+			else if (s < 0.5)
 			{
-				writeInBuffer(x, y, 'o');
+				writeInBuffer(x, y, 'O');
 			}
-			else if (s < 0.8)
+			else if(s < 0.7)
+			{
+				writeInBuffer(x, y, ':');
+			}else if (s < 0.9)
 			{
 				writeInBuffer(x, y, '.');
 			}
@@ -97,10 +107,10 @@ bool gameLogic(float deltaTime)
 			{
 				writeInBuffer(x, y, ' ');
 			}
-
-
+	
 		}
 
+	std::cout << platform::getRelMousePosition().x <<" "<< platform::getRelMousePosition().y << " \n";
 
 
 	renderer.flush();

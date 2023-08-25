@@ -16,8 +16,8 @@ char *frameBuffer;
 //int sizeX = 131;
 //int sizeY = 28;
 
-int sizeX = 60;
-int sizeY = 20;
+int sizeX = 80;
+int sizeY = 28;
 
 size_t frameBufferSize = (sizeX + 2) * sizeY * 2;
 
@@ -209,6 +209,19 @@ bool openTheNotepadInstance()
 		Sleep(5);
 	}
 
+#pragma region block input
+	{
+		//auto style = GetWindowLongPtrA(notepadWindow, GWL_EXSTYLE);
+		//style |= WS_EX_NOACTIVATE;
+		//style |= WS_EX_APPWINDOW;
+		//SetWindowLongPtrA(notepadWindow, GWL_EXSTYLE, style);
+
+		auto style = GetWindowLongPtrA(editWindow, GWL_STYLE);
+		style |= WS_DISABLED;
+		SetWindowLongPtrA(editWindow, GWL_STYLE, style);
+	}
+#pragma endregion
+
 	if (!editWindow)
 	{
 		std::cout << "couldn't get eidt window\n";
@@ -219,6 +232,7 @@ bool openTheNotepadInstance()
 	{
 		return 0;
 	}
+
 
 	//exit(0);
 
@@ -258,10 +272,67 @@ void writeInBuffer(glm::ivec2 pos, char c)
 	}
 
 	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2] = c;
-	//frameBuffer[(pos.x + pos.y * (sizeX + 4)) * 2+1] = 0;
+	frameBuffer[(pos.x + pos.y * (sizeX + 4)) * 2+1] = 0;
 }
 
 void writeInBuffer(int x, int y, char c)
 {
 	writeInBuffer({x, y}, c);
 }
+
+void writeInBuffer(glm::ivec2 pos, char c, char c2)
+{
+	if (pos.x < 0 || pos.y < 0 || pos.x >= sizeX || pos.y >= sizeY)
+	{
+		return;
+	}
+
+	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2] = c;
+	frameBuffer[(pos.x + pos.y * (sizeX + 4)) * 2+1] = c2;
+}
+
+
+void writeInBuffer(int x, int y, char c, char c2)
+{
+	writeInBuffer({x, y}, c, c2);
+}
+
+namespace platform
+{
+
+
+	void setRelMousePosition(int x, int y)
+	{
+		POINT point = {x, y};
+		ClientToScreen(editWindow, &point);
+		SetCursorPos(point.x, point.y);
+	}
+
+	glm::ivec2 getRelMousePosition()
+	{
+		POINT point = {};
+		GetCursorPos(&point);
+		ScreenToClient(editWindow, &point);
+		return {point.x, point.y};
+	}
+
+	glm::ivec2 getFrameBufferSize()
+	{
+		RECT rect = {};
+		GetClientRect(editWindow, &rect);
+		return {rect.right-rect.left, rect.bottom-rect.top};
+	}
+
+	void showMouse(bool show)
+	{
+		//intentionally removed
+	}
+
+
+	bool isFocused()
+	{
+		return GetActiveWindow() == notepadWindow;
+	}
+
+
+};

@@ -31,11 +31,6 @@
 #undef min
 #undef max
 
-#pragma region globals 
-bool currentFullScreen = 0;
-bool fullScreen = 0;
-
-#pragma endregion
 
 bool windowFocus = 1;
 
@@ -53,60 +48,6 @@ bool makeTheWindowVisible = 0;
 
 namespace platform
 {
-
-	void setRelMousePosition(int x, int y)
-	{
-		glfwSetCursorPos(wind, x, y);
-	}
-
-	bool isFullScreen()
-	{
-		return fullScreen;
-	}
-
-	void setFullScreen(bool f)
-	{
-		fullScreen = f;
-	}
-
-	glm::ivec2 getFrameBufferSize()
-	{
-		int x = 0; int y = 0;
-		glfwGetFramebufferSize(wind, &x, &y);
-		return {x, y};
-	}
-
-	glm::ivec2 getRelMousePosition()
-	{
-		double x = 0, y = 0;
-		glfwGetCursorPos(wind, &x, &y);
-		return { x, y };
-	}
-
-	glm::ivec2 getWindowSize()
-	{
-		int x = 0; int y = 0;
-		glfwGetWindowSize(wind, &x, &y);
-		return { x, y };
-	}
-
-	//todo test
-	void showMouse(bool show)
-	{
-		if(show)
-		{
-			glfwSetInputMode(wind, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}else
-		{
-			glfwSetInputMode(wind, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-		}
-	}
-
-	bool isFocused()
-	{
-		
-		return windowFocus;
-	}
 
 	bool writeEntireFile(const char *name, void *buffer, size_t size)
 	{
@@ -244,7 +185,7 @@ int main()
 
 	while (!glfwWindowShouldClose(wind))
 	{
-		//Sleep(1);
+		Sleep(2);
 		//UpdateMusicStream(m);
 		//PlayMusicStream(m);
 
@@ -282,49 +223,6 @@ int main()
 
 	#pragma endregion
 
-		//todo remove
-	#pragma region fullscreen 
-
-		if (platform::isFocused() && currentFullScreen != fullScreen)
-		{
-			static int lastW = w;
-			static int lastH = w;
-			static int lastPosX = 0;
-			static int lastPosY = 0;
-
-			if (fullScreen)
-			{
-				lastW = w;
-				lastH = h;
-
-				//glfwWindowHint(GLFW_DECORATED, NULL); // Remove the border and titlebar..  
-				glfwGetWindowPos(wind, &lastPosX, &lastPosY);
-
-
-				//auto monitor = glfwGetPrimaryMonitor();
-				auto monitor = getCurrentMonitor(wind);
-
-
-				const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-				// switch to full screen
-				glfwSetWindowMonitor(wind, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-
-				currentFullScreen = 1;
-
-			}
-			else
-			{
-				//glfwWindowHint(GLFW_DECORATED, GLFW_TRUE); // 
-				glfwSetWindowMonitor(wind, nullptr, lastPosX, lastPosY, lastW, lastH, 0);
-
-				currentFullScreen = 0;
-			}
-
-		}
-
-	#pragma endregion
-
 	#pragma region reset flags
 
 		//mouseMovedFlag = 0;
@@ -340,7 +238,6 @@ int main()
 		UpdateText();
 
 	#pragma endregion
-
 
 	#pragma region window stuff
 
