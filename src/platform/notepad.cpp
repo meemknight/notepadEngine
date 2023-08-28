@@ -309,7 +309,7 @@ void writeInBuffer(glm::ivec2 pos, char c)
 	}
 
 	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2] = c;
-	frameBuffer[(pos.x + pos.y * (sizeX + 4)) * 2+1] = 0;
+	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2+1] = 0;
 }
 
 void writeInBuffer(int x, int y, char c)
@@ -325,7 +325,7 @@ void writeInBuffer(glm::ivec2 pos, char c, char c2)
 	}
 
 	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2] = c;
-	frameBuffer[(pos.x + pos.y * (sizeX + 4)) * 2+1] = c2;
+	frameBuffer[(pos.x + pos.y * (sizeX + 2)) * 2+1] = c2;
 }
 
 

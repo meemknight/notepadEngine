@@ -7,7 +7,6 @@
 #include <ctime>
 #include "platformTools.h"
 #include "config.h"
-#include <raudio.h>
 #include "platformInput.h"
 #include "otherPlatformFunctions.h"
 #include "gameLayer.h"
@@ -16,7 +15,7 @@
 #include <notepad.h>
 #include <openglError.h>
 
-#define REMOVE_IMGUI 1
+#define REMOVE_IMGUI 0
 
 #if REMOVE_IMGUI == 0
 	#include "imgui.h"
@@ -83,6 +82,19 @@ namespace platform
 };
 #pragma endregion
 
+
+float superSampleTresshold = 0.5;
+int currentSampleMethod = 0;
+bool applyCurves = 1;
+
+//float curvesA = 0.118;
+//float curvesB = 0.565;
+
+float curvesA = 0.075;
+float curvesB = 0.315;
+
+int findX = 0;
+int findY = 0;
 
 int main()
 {
@@ -227,94 +239,340 @@ int main()
 		#endif
 	#pragma endregion
 
-	#pragma region game logic
+		#pragma region imgui
 
-		if (!gameLogic(augmentedDeltaTime, windowFbo))
-		{
-			closeGame();
-			return 0;
-		}
+			ImGui::Begin("controlls");
 
-		if (makeTheWindowVisible)
-		{
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glClear(GL_COLOR_BUFFER_BIT);
-			glDisable(GL_DEPTH_TEST);
+			ImGui::Combo("Sample method", &currentSampleMethod, "Nearest\0Linear\0Super\0Combination\0FindStuff\0");
 
-			screenRenderer.renderRectangle({0, 0, platform::getFrameBufferSize()}, windowFbo.texture);
-			screenRenderer.flush();
+			ImGui::Checkbox("Curves", &applyCurves);
 
-			//glBegin(GL_TRIANGLES);
-			//
-			//glVertex2f(0, 1);
-			//glVertex2f(1, -1);
-			//glVertex2f(-1, -1);
-			//
-			//glEnd();
-
-		}
-
-	#pragma endregion
-
-	#pragma region render to notepad
-		{
-			static std::vector<unsigned char> immageData;
-			glm::ivec2 immageSize = windowFbo.texture.GetSize();
-			immageData.reserve(4 * immageSize.x * immageSize.y);
-
-			assert(immageSize == platform::getFrameBufferSize());
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, windowFbo.texture.id);
-
-			glGetTexImage(GL_TEXTURE_2D,
-				0,
-				GL_RGBA,
-				GL_UNSIGNED_BYTE,
-				immageData.data());
-
-			auto sampleImmage = [&](float x, float y) -> float
+			if (applyCurves)
 			{
-				if (x < 0 || x>1 || y < 0 || y>1) { return 0.f; }
+				ImGui::SliderFloat("A", &curvesA, 0, 1);
+				ImGui::SliderFloat("B", &curvesB, 0, 1);
+			}
 
-				glm::ivec2 pos = glm::ivec2(glm::vec2(x, y) * glm::vec2(immageSize - glm::ivec2(1, 1)));
-
-				glm::vec4 data;
-
-				data.r = immageData[(pos.x + pos.y * immageSize.x) * 4] / 255.f;
-				data.g = immageData[(pos.x + pos.y * immageSize.x) * 4 + 1] / 255.f;
-				data.b = immageData[(pos.x + pos.y * immageSize.x) * 4 + 2] / 255.f;
-
-				return glm::dot(glm::vec3(data), glm::vec3(0.2126, 0.7152, 0.0722));
-			};
-
-			struct Letter
+			if (currentSampleMethod == 0)
 			{
-				char a = ' ';
-				char b = 0;
-			};
 
-			Letter gradient[] = {{' '}, { '.' }, {':'}, {'-'}, {'='}, {'+'}, {'*'}, {'#'}};
+			}
+			else if (currentSampleMethod == 1)
+			{
 
-			for (int y = 0; y < getNotepadBufferSize().y; y++)
-				for (int x = 0; x < getNotepadBufferSize().x; x++)
+			}
+			else
+				if (currentSampleMethod == 2)
 				{
-
-					glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
-
-					auto s = sampleImmage(uv.x, 1.f-uv.y);
-
-					int gradientCount = sizeof(gradient) / sizeof(Letter);
-					int index = (1 - s) * (gradientCount-1);
-
-					writeInBuffer(x, y, gradient[index].a, gradient[index].b);
-
+					ImGui::SliderFloat("Super sample tresshold", &superSampleTresshold, 0, 1);
+				}
+				else if (currentSampleMethod == 4)
+				{
+					ImGui::DragInt("X", &findX, 1, 0, 210);
+					ImGui::DragInt("Y", &findY, 1, 0, 210);
 				}
 
-		}
-	#pragma endregion
+			ImGui::End();
 
 
+		#pragma endregion
+			
+		#pragma region game logic
+
+			if (!gameLogic(augmentedDeltaTime, windowFbo))
+			{
+				closeGame();
+				return 0;
+			}
+
+			if (makeTheWindowVisible)
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDisable(GL_DEPTH_TEST);
+
+				screenRenderer.renderRectangle({0, 0, platform::getFrameBufferSize()}, windowFbo.texture);
+				screenRenderer.flush();
+			}
+
+		#pragma endregion
+
+		#pragma region render to notepad
+			{
+				static std::vector<unsigned char> immageData;
+				glm::ivec2 immageSize = windowFbo.texture.GetSize();
+				immageData.reserve(4 * immageSize.x * immageSize.y);
+
+				assert(immageSize == platform::getFrameBufferSize());
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, windowFbo.texture.id);
+
+				glGetTexImage(GL_TEXTURE_2D,
+					0,
+					GL_RGBA,
+					GL_UNSIGNED_BYTE,
+					immageData.data());
+
+				auto computeCurve = [](float in)
+				{
+					if (!applyCurves) { return in; };
+
+					if (in <= curvesA) { return 0.f; }
+					if (in >= curvesB) { return 1.f; }
+
+					return (in - curvesA) / (curvesB - curvesA);
+				};
+
+				auto sampleImmage = [&](float x, float y) -> float
+				{
+					if (x < 0 || x>1 || y < 0 || y>1) { return 0.f; }
+
+					glm::ivec2 pos = glm::ivec2(glm::vec2(x, y) * glm::vec2(immageSize - glm::ivec2(1, 1)));
+
+					glm::vec4 data;
+
+					data.r = immageData[(pos.x + pos.y * immageSize.x) * 4] / 255.f;
+					data.g = immageData[(pos.x + pos.y * immageSize.x) * 4 + 1] / 255.f;
+					data.b = immageData[(pos.x + pos.y * immageSize.x) * 4 + 2] / 255.f;
+
+					return computeCurve(glm::dot(glm::vec3(data), glm::vec3(0.2126, 0.7152, 0.0722)));
+				};
+
+				struct Letter
+				{
+					char a = ' ';
+					char b = 0;
+				};
+
+				Letter gradient[] = {{' '}, { 0x80,0x28 }, {0x88,0x28},
+					{0x98,0x28}, {0x29,0x28}, {0xf1,0x28}, {145, 37}, {146, 37},
+					{147, 37}, {136, 37}};
+
+				glm::vec2 blockSizePixeld = glm::vec2(immageSize) / glm::vec2(getNotepadBufferSize());
+				glm::vec2 blockSizeUV = glm::vec2(1, 1) / glm::vec2(getNotepadBufferSize());
+
+
+
+				auto linearSample = [&](int x, int y)
+				{
+
+					int sampleCount = 0;
+					float averageLuminosity = 0;
+
+					for (int j = 0; j < blockSizePixeld.y; j++)
+						for (int i = 0; i < blockSizePixeld.x; i++)
+						{
+							glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
+							uv += blockSizeUV * glm::vec2(i / (blockSizePixeld.x - 1.f), j / (blockSizePixeld.y - 1.f));
+
+							auto s = sampleImmage(uv.x, 1.f - uv.y);
+
+							sampleCount++;
+							averageLuminosity += s;
+						}
+					averageLuminosity /= sampleCount;
+
+					int gradientCount = sizeof(gradient) / sizeof(Letter);
+					int index = (1 - averageLuminosity) * (gradientCount - 1);
+
+					writeInBuffer(x, y, gradient[index].a, gradient[index].b);
+					//writeInBuffer(x, y, 0xfa, 0x28);
+					//writeInBuffer(x, y, x+27, y+43);
+				};
+
+				//linear sample
+				if (currentSampleMethod == 1)
+				{
+					for (int y = 0; y < getNotepadBufferSize().y; y++)
+						for (int x = 0; x < getNotepadBufferSize().x; x++)
+						{
+							linearSample(x, y);
+						}
+				}
+
+				auto nearestPixel = [&](int x, int y)
+				{
+					glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
+
+					auto s = sampleImmage(uv.x, 1.f - uv.y);
+
+					int gradientCount = sizeof(gradient) / sizeof(Letter);
+					int index = (1 - s) * (gradientCount - 1);
+
+					writeInBuffer(x, y, gradient[index].a, gradient[index].b);
+					//writeInBuffer(x, y, 0xfa, 0x28);
+					//writeInBuffer(x, y, x+27, y+43);
+				};
+				//nerest pixel
+				if (currentSampleMethod == 0)
+				{
+					for (int y = 0; y < getNotepadBufferSize().y; y++)
+						for (int x = 0; x < getNotepadBufferSize().x; x++)
+						{
+							nearestPixel(x, y);
+						}
+				}
+
+				auto superSample = [&](int x, int y)
+				{
+
+					unsigned char brailBlock = {};
+
+					auto getBrailBlock = [&](int x, int y) -> bool
+					{
+						assert(x >= 0 && x <= 1 && y >= 0 && y <= 3);
+
+						if (x)
+						{
+							return brailBlock & (0b1'0000 << y);
+						}
+						else
+						{
+							return brailBlock & (0b1 << y);
+						}
+
+					};
+
+					auto setBrailBlock = [&](int x, int y, bool v) -> void
+					{
+						assert(x >= 0 && x <= 1 && y >= 0 && y <= 3);
+
+						if (v)
+						{
+							if (x)
+							{
+								brailBlock |= (0b1'0000 << y);
+							}
+							else
+							{
+								brailBlock |= (0b1 << y);
+							}
+						}
+						else
+						{
+							if (x)
+							{
+								brailBlock &= !(unsigned char)(0b1'0000 << y);
+							}
+							else
+							{
+								brailBlock &= !(unsigned char)(0b1 << y);
+							}
+						}
+					};
+
+					for (int j = 0; j < 4; j++)
+						for (int i = 0; i < 2; i++)
+						{
+							glm::vec2 uv = glm::vec2(x, y) / glm::vec2(getNotepadBufferSize());
+							uv += blockSizeUV * glm::vec2(i / (1.f), j / (3.f));
+
+							//sample in the middle of the 'pixel'
+							//uv += blockSizeUV / (glm::vec2(2, 4) * 2.f); //not quite working
+
+							auto s = sampleImmage(uv.x, 1.f - uv.y);
+
+							if (s > superSampleTresshold)
+							{
+								setBrailBlock(i, j, false);
+							}
+							else
+							{
+								setBrailBlock(i, j, true); //set means black
+							}
+						}
+
+					char remappedBrail = 0;
+
+					if (getBrailBlock(0, 0))
+					{
+						remappedBrail |= 0b0000'0001;
+					}
+
+					if (getBrailBlock(0, 1))
+					{
+						remappedBrail |= 0b0000'0010;
+					}
+
+					if (getBrailBlock(0, 2))
+					{
+						remappedBrail |= 0b0000'0100;
+					}
+
+					if (getBrailBlock(1, 0))
+					{
+						remappedBrail |= 0b0000'1000;
+					}
+
+					if (getBrailBlock(1, 1))
+					{
+						remappedBrail |= 0b0001'0000;
+					}
+
+					if (getBrailBlock(1, 2))
+					{
+						remappedBrail |= 0b0010'0000;
+					}
+
+					if (getBrailBlock(0, 3))
+					{
+						remappedBrail |= 0b0100'0000;
+					}
+
+					if (getBrailBlock(1, 3))
+					{
+						remappedBrail |= 0b1000'0001;
+					}
+
+					writeInBuffer(x, y, remappedBrail, 0x28);
+
+					//int gradientCount = sizeof(gradient) / sizeof(Letter);
+					//int index = (1 - averageLuminosity) * (gradientCount - 1);
+
+					//writeInBuffer(x, y, gradient[index].a, gradient[index].b);
+					//writeInBuffer(x, y, x+27, y+43);
+				};
+				//super sample
+				if (currentSampleMethod == 2)
+				{
+					for (int y = 0; y < getNotepadBufferSize().y; y++)
+						for (int x = 0; x < getNotepadBufferSize().x; x++)
+						{
+							superSample(x, y);
+						}
+				}
+
+				//combination
+				if (currentSampleMethod == 3)
+				{
+					for (int y = 0; y < getNotepadBufferSize().y; y++)
+						for (int x = 0; x < getNotepadBufferSize().x; x++)
+						{
+							if (((x % 2) && (y % 2)) || (!(x % 2) && !(y % 2)))
+							{
+								linearSample(x, y);
+							}
+							else
+							{
+								superSample(x, y);
+							}
+
+						}
+				}
+
+				//find stuff
+				if (currentSampleMethod == 4)
+				{
+					for (int y = 0; y < getNotepadBufferSize().y; y++)
+						for (int x = 0; x < getNotepadBufferSize().x; x++)
+						{
+							writeInBuffer(x, y, x + findX, y + findY);
+						}
+				}
+
+			}
+		#pragma endregion
 
 	#pragma region reset flags
 
@@ -382,7 +640,7 @@ int main()
 				}
 				else if (i >= VK_NUMPAD0 && i <= VK_NUMPAD9)
 				{
-					int index = i - VK_NUMPAD0;
+					int index = i - VK_NUMPAD0 + platform::Button::NR0;
 					return index;
 				}
 

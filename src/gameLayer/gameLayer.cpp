@@ -50,6 +50,8 @@ bool gameLogic(float deltaTime, gl2d::FrameBuffer fbo)
 	static glm::vec2 pos = {100,100};
 
 	renderer.renderRectangle({pos, 100, 100}, t);
+
+	renderer.renderRectangle({200,200, 100, 100}, Colors_White);
 	renderer.flush();
 
 	if (platform::isKeyHeld(platform::Button::Left))
